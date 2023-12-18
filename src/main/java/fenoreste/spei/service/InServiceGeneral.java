@@ -205,14 +205,14 @@ public class InServiceGeneral {
 		                                	log.info("Vamos a depositar a la TDD Alestra");
 		                                	valiResponse = validaReglasCsn(a_pk, in.getMonto(),in.getFechaOperacion(),1);
 		                                }else {
-		                                	valiResponse.setId(999);
+		                                	valiResponse = validaReglasMitras(a_pk, in.getMonto(),in.getFechaOperacion());
 		                                }
 		                              
 		                               
 		                                if(valiResponse.getId() == 999) {
 		                                	//vamos a general poliza(cargo cuenta spei y abono tdd)
 		                                	Integer movs_aplicados = funcionesSaiService.aplica_movs(Integer.parseInt(tb_usuario.getDato1()), temporal.getSesion(),1,temporal.getReferencia());
-		                                	
+		                                	log.info("total aplicados");
 		                                	if(movs_aplicados > 0) {
 		                                		
 		                                		/*********************Comision************************/
@@ -269,38 +269,43 @@ public class InServiceGeneral {
 					                                temporal.setSesion(funcionesSaiService.session());	
 					                                temporal.setMov(5);
 					                                temporal.setTipopoliza(3);
-					                                speiTemporalService.guardar(temporal);
+					                                speiTemporalService.guardar(temporal);				                                
 					                                
-					                                
-					                                if(matriz.getIdorigen() == 30200) {//Cargo a la TDD Alestra
+					                                if(matriz.getIdorigen() == 30200) {//Validamos el origen porque si es csn hay que depositarle a TDD
 					                                	log.info("Vamos retirar la comision de la TDD");
 					                                	valiResponse = validaReglasCsn(a.getAuxiliarPK(),0.0,in.getFechaOperacion(),2);//Double.parseDouble(tb_comision.getDato1())+ (Double.parseDouble(tb_comision.getDato1())) *0.16, ovs_aplicados, movs_aplicados) = consumoCsnTDD.retirarSaldo(tb_url_tdd.getDato2(),tarjeta.getIdtarjeta(),);	
+				                                	    if(valiResponse.getId() == 999) {
+						                                	movs_aplicados = funcionesSaiService.aplica_movs(Integer.parseInt(tb_usuario.getDato1()), temporal.getSesion(),3,temporal.getReferencia());
+						                                	if(movs_aplicados > 0) {
+					                                	    	log.info("....uso de tdd activa pero sin conexion a ws.....");
+							                                	operacion.setMensajeerror("uso de tdd activa pero sin conexion a ws");
+														    	operacion.setResponsecode(35);
+														    	abonoSpeiService.guardar(operacion);
+							                                	resp.setId(35);
+							                                	resp.setMensaje("devolver");
+					                                	    }else {
+					                                	    	//Aqui hay que realizar depositar la comision que se retiro
+					                                	    	log.info(".........Se volvio a retirar de la TDD falla en SAICoop.......");
+					                                	    	valiResponse = validaReglasCsn(a.getAuxiliarPK(),0.0,in.getFechaOperacion(),3);
+					                                	    }
+				                                	    }
+					                                	
 					                                }else {
 					                                	valiResponse.setId(999);
-					                                }
+					                                }					                               
 				                                }
 				                                
 				                                
 				                                if(valiResponse.getId() == 999) {
-				                                	movs_aplicados = funcionesSaiService.aplica_movs(Integer.parseInt(tb_usuario.getDato1()), temporal.getSesion(),3,temporal.getReferencia());
-			                                		resp.setMensaje("confirmar");
+				                                	resp.setMensaje("confirmar");
 			                                		operacion.setAplicado(true);
 			                                		operacion.setFechaProcesada(new Date());
 											    	operacion.setResponsecode(000);
-											    	abonoSpeiService.guardar(operacion);	
-				                                }else {
-				                                	log.info("....uso de tdd activa pero sin conexion a ws.....");
-				                                	operacion.setMensajeerror("uso de tdd activa pero sin conexion a ws");
-											    	operacion.setResponsecode(35);
 											    	abonoSpeiService.guardar(operacion);
-				                                	resp.setId(35);
-				                                	resp.setMensaje("devolver");
 				                                }
-				                                
-		                                		
-		                                	 }else {
-		                                	    log.info(".........Se volvio a retirar de la TDD falla en SAICoop.......");
+		                                	 }else {		                                	    
 		                                	    if(matriz.getIdorigen() == 30200) {
+		                                	    	log.info(".........Se volvio a retirar de la TDD falla en SAICoop.......");
 		                                	    	valiResponse = validaReglasCsn(a_pk, in.getMonto(),in.getFechaOperacion(),2);
 		                                	    }
 		                                	    //bandera = consumoCsnTDD.retirarSaldo(tb_url_tdd.getDato2(),tarjeta.getIdtarjeta(),in.getMonto());
@@ -311,6 +316,8 @@ public class InServiceGeneral {
 		                                	    resp.setMensaje("devolver");
 		                                	}								                                	
 		                                }else {
+		                                	log.info("Vali response:"+valiResponse);
+		                                	log.info("Mensaje ne la validacion:"+valiResponse.getMensaje());
 		                                	operacion.setMensajeerror(valiResponse.getMensaje());
 									    	operacion.setResponsecode(valiResponse.getId());
 									    	abonoSpeiService.guardar(operacion);
@@ -546,7 +553,7 @@ public class InServiceGeneral {
 	
 	
 	
-	private response validaReglasMitras(AuxiliarPK opa,Double monto,Integer fechaOperacion,Integer tipoOperacion) {
+	private response validaReglasMitras(AuxiliarPK opa,Double monto,Integer fechaOperacion) {
 		response response = new response();
 		response.setId(0);
 		response.setMensaje("Error General");

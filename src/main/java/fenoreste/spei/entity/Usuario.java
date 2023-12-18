@@ -35,8 +35,6 @@ public class Usuario implements Serializable {
 	 private Integer                p_idgrupo      ;
 	 private Integer                p_idsocio      ;
 	 private String                 impticket      ;
-	 private String                 passwd2        ;
-	 private String                 passwd3        ;
 	 private String                 passwd         ;
 	 private String                 ip_local       ;
 	 private Integer                ticket         ;
